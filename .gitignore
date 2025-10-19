@@ -8,3 +8,18 @@ wheels/
 
 # Virtual environments
 .venv
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+compile_commands.json
+
+# Clangd cache
+.cache/
+.clangd
+
+# build artifacts
+/build/
+*.out
