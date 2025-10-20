@@ -23,3 +23,4 @@ compile_commands.json
 # build artifacts
 /build/
 *.out
+html
