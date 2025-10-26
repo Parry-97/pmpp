@@ -130,8 +130,9 @@ void par_vecAdd(float *h_A, float *h_B, float *h_C, int n) {
 }
 
 int main() {
-  printf("Hello from the CPU!\n");
-  hello_from_gpu<<<1, 1>>>();
-  cudaDeviceSynchronize();
+  printf("vector addition - CUDA implementation\n");
+  printf("Chapter 2: Vector addition\n\n");
+
+  // TODO: Implement test/demo code
   return 0;
 }
