@@ -2,6 +2,43 @@
 
 __global__ void hello_from_gpu() { printf("Hello from the GPU!\n"); }
 
+/*
+ * @brief CUDA kernel for vector addition
+ *
+ * This kernel function computes the addition of a vector element
+ *
+ * @param A_d The first vector
+ * @param B_d The second vector
+ * @param C_d The result vector
+ * */
+__global__ void vec_add_kernel(float *d_A, float *d_B, float *d_C, int n) {
+
+  // NOTE: The `__global__` keyword indicates that the function is a kernel and
+  // that it can be called to generate a grid of threads on a device.
+
+  // NOTE: a unique global index i is calculated
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+  // WARN: This is because not all vector lengths can be expressed as multiples
+  // of the block size. For example, let’s assume that the vector length is 100,
+  // the smallest efficient thread block dimension is 32. Assume that we picked
+  // 32 as block size. One would need to launch 4 thread blocks to process all
+  // the 100 vector elements. However, the 4 thread blocks would have 128
+  // threads. We need to disable the last 28 threads in thread block 3 from
+  // doing work not expected by the original program.
+  // Since all threads are to execute the same code, all will test their i
+  // values against n, which is 100. With the if (i<n) statement, the first 100
+  // threads will perform the addition, whereas the last 28 will not. This
+  // allows the kernel to be called to process vectors of arbitrary lengths.
+  if (i < n) {
+
+    // NOTE: Note that all the thread blocks operate on different parts of the
+    // vectors. They can be executed in any arbitrary order. The programmer must
+    // not make any assumptions regarding execution order.
+    d_C[i] = d_A[i] + d_B[i];
+  }
+}
+
 /**
  * @brief Sequential vector addition
  *
@@ -19,7 +56,17 @@ void seq_vec_add(float *h_A, float *h_B, float *h_C, int n) {
   }
 }
 
-void vecAdd(float *h_A, float *h_B, float *h_C, int n) {
+/*
+ * @brief Parallel vector addition
+ *
+ * This functions adds two vector in a parallel fashion.
+ *
+ * @param h_A The first vector
+ * @param h_B The second vector
+ * @param h_C The result vector
+ * @param n The length of the vectors
+ * */
+void par_vecAdd(float *h_A, float *h_B, float *h_C, int n) {
   int size = n * sizeof(float);
   float *d_A, *d_B, *d_C;
 
@@ -65,9 +112,14 @@ void vecAdd(float *h_A, float *h_B, float *h_C, int n) {
   // device, from device to host, and from device to device.
   cudaMemcpy(d_A, h_A, size, cudaMemcpyHostToDevice);
   cudaMemcpy(d_B, h_B, size, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_C, h_C, size, cudaMemcpyHostToDevice);
 
-  cudaMemcpy(h_C, d_C, size, cudaMemcpyHostToDevice);
+  // NOTE: When the host code calls a kernel, it sets the grid and thread block
+  // dimensions via execution configuration parameters.
+  // The first configuration parameter gives the number of blocks in the grid.
+  // The second specifies the number of threads in each block.
+  vec_add_kernel<<<ceil(n / 256.0), 256>>>(d_A, d_B, d_C, n);
+
+  cudaMemcpy(h_C, d_C, size, cudaMemcpyDeviceToHost);
 
   // NOTE: cudaFree does not need to change the value it only needs to use the
   // value of A_d to return the allocated memory back to the available pool.
