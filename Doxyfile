@@ -2101,7 +2101,7 @@ EXTRA_SEARCH_MAPPINGS  =
 # If the GENERATE_LATEX tag is set to YES, Doxygen will generate LaTeX output.
 # The default value is: YES.
 
-GENERATE_LATEX         = YES
+GENERATE_LATEX         = NO
 
 # The LATEX_OUTPUT tag is used to specify where the LaTeX docs will be put. If a
 # relative path is entered the value of OUTPUT_DIRECTORY will be put in front of
@@ -2121,7 +2121,7 @@ LATEX_OUTPUT           = latex
 # the output language.
 # This tag requires that the tag GENERATE_LATEX is set to YES.
 
-LATEX_CMD_NAME         =
+LATEX_CMD_NAME         = tectonic
 
 # The MAKEINDEX_CMD_NAME tag can be used to specify the command name to generate
 # index for LaTeX.
@@ -2131,7 +2131,7 @@ LATEX_CMD_NAME         =
 # The default file is: makeindex.
 # This tag requires that the tag GENERATE_LATEX is set to YES.
 
-MAKEINDEX_CMD_NAME     = makeindex
+MAKEINDEX_CMD_NAME     =
 
 # The LATEX_MAKEINDEX_CMD tag can be used to specify the command name to
 # generate index for LaTeX. In case there is no backslash (\) as first character
