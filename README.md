@@ -10,6 +10,7 @@ A learning repository following the book **"Programming Massively Parallel Proce
 ## 📚 About
 
 This repository documents my journey learning GPU programming and parallel computing. I'm experimenting with:
+
 - **CUDA C/C++** for low-level GPU programming
 - **Triton** for high-level, Pythonic GPU kernels
 - **CMake** for C/C++ build management
@@ -48,10 +49,12 @@ pmpp/
 ## 🔧 Prerequisites
 
 ### Hardware
+
 - NVIDIA GPU with CUDA support (Compute Capability 3.5+)
 - Check your GPU: `nvidia-smi`
 
 ### Software
+
 - **CUDA Toolkit** (≥11.0 recommended) - [Installation Guide](https://developer.nvidia.com/cuda-downloads)
 - **CMake** (≥3.18) - For building C/C++ projects
 - **Python** (≥3.11) - For Triton implementations
@@ -71,12 +74,14 @@ nvidia-smi
 ### 1. Clone the Repository
 
 Using jj:
+
 ```bash
 jj git clone <repository-url>
 cd pmpp
 ```
 
 Or with git:
+
 ```bash
 git clone <repository-url>
 cd pmpp
@@ -107,6 +112,7 @@ cmake --build build
 ```
 
 For a cleaner workflow, you can also use:
+
 ```bash
 cd src/cuda/vector_add
 cmake .
@@ -170,15 +176,18 @@ jj git fetch         # Fetch from git remote
 ## 📚 Learning Resources
 
 ### Primary Resource
+
 - **Book:** [Programming Massively Parallel Processors](https://www.elsevier.com/books/programming-massively-parallel-processors/hwu/978-0-323-91231-0) (4th Edition recommended)
 
 ### Documentation
+
 - [NVIDIA CUDA Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/)
 - [CUDA Best Practices Guide](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/)
 - [Triton Documentation](https://triton-lang.org/)
 - [OpenAI Triton Tutorials](https://triton-lang.org/main/getting-started/tutorials/index.html)
 
 ### Supplementary Materials
+
 - [CUDA by Example](https://developer.nvidia.com/cuda-example)
 - [GPU Gems Series](https://developer.nvidia.com/gpugems/gpugems/contributors)
 - Chapter notes available in the `notes/` directory
@@ -196,17 +205,18 @@ jj git fetch         # Fetch from git remote
 
 ## 🗺️ Chapter Progress
 
-| Chapter | Topic | CUDA C/C++ | Triton | Notes |
-|---------|-------|------------|--------|-------|
-| 1 | Introduction | ✅ | - | ✅ |
-| 2 | Heterogeneous Data Parallel Computing | ✅ | 🔜 | ✅ |
-| 3 | Multidimensional Grids and Data | 🔄 | 🔜 | 🔄 |
-| 4 | Compute Architecture and Scheduling | 🔜 | 🔜 | 🔜 |
-| ... | ... | ... | ... | ... |
+| Chapter | Topic                                 | CUDA C/C++ | Triton | Notes |
+| ------- | ------------------------------------- | ---------- | ------ | ----- |
+| 1       | Introduction                          | ✅         | -      | ✅    |
+| 2       | Heterogeneous Data Parallel Computing | ✅         | 🔜     | ✅    |
+| 3       | Multidimensional Grids and Data       | 🔄         | 🔜     | 🔄    |
+| 4       | Compute Architecture and Scheduling   | 🔜         | 🔜     | 🔜    |
+| ...     | ...                                   | ...        | ...    | ...   |
 
 ## 🤝 Contributing
 
 This is a personal learning repository, but suggestions and corrections are welcome! Feel free to:
+
 - Open issues for questions or clarifications
 - Submit pull requests for bug fixes
 - Share alternative implementations
@@ -216,9 +226,10 @@ This is a personal learning repository, but suggestions and corrections are welc
 This project is for educational purposes. Code implementations are based on exercises and examples from "Programming Massively Parallel Processors."
 
 For academic use, please cite the original book:
+
 ```
-Hwu, W., Kirk, D., & El Hajj, I. (2022). 
-Programming Massively Parallel Processors: A Hands-on Approach (4th ed.). 
+Hwu, W., Kirk, D., & El Hajj, I. (2022).
+Programming Massively Parallel Processors: A Hands-on Approach (4th ed.).
 Morgan Kaufmann.
 ```
 
@@ -226,4 +237,4 @@ Morgan Kaufmann.
 
 **Built with:** 🚀 CUDA • 🐍 Python • ⚡ Triton • 🛠️ CMake • 📦 uv • 📚 Doxygen • 🌿 jj
 
-*Happy parallel programming! 🎉*
+_Happy parallel programming! 🎉_
