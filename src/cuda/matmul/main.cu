@@ -6,6 +6,7 @@
  *
  */
 
+#include <__clang_cuda_builtin_vars.h>
 #include <cmath>
 #include <stdio.h>
 
@@ -33,6 +34,54 @@ __global__ void matmul_kernel(float *M, float *N, float *P, int width) {
     }
 
     P[row * width + col] = outVal;
+  }
+}
+
+/**
+ * @brief CUDA kernel for matrix multiplication for rows
+ *
+ * Performs matrix multiplication P = M * N for each row
+ *
+ * @param M First input matrix (row-major)
+ * @param N Second input matrix (row-major)
+ * @param P Output matrix (row-major)
+ * @param width Width and height of square matrices
+ */
+__global__ void matmul_row_kernel(float *M, float *N, float *P, int width) {
+
+  int row = blockIdx.y * blockDim.y + threadIdx.y;
+
+  if (row < width) {
+    float outVal = 0;
+    // NOTE: The col index is replaced NOW by j
+    for (int j = 0; j < width; j++) {
+      for (int i = 0; i < width; i++) {
+        outVal += M[row * width + i] * N[i * width + j];
+      }
+      P[row * width + j] = outVal;
+    }
+  }
+}
+
+/**
+ * @brief CUDA kernel for matrix vector multiplication
+ *
+ * Performs matrix vector multiplication P = M * N
+ *
+ * @param M Input matrix (row-major)
+ * @param N Input vector
+ * @param P Output vector
+ * @param width Width and height of square matrices
+ */
+__global__ void matvec_kernel(float *M, float *N, float *P, int width) {
+  int row = blockIdx.y * blockDim.y + threadIdx.y;
+  if (row < width) {
+    float outVal = 0;
+    for (int i = 0; i < width; i++) {
+      outVal += M[row * width + i] * N[i];
+    }
+
+    P[row] = outVal;
   }
 }
 
