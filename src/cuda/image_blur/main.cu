@@ -8,16 +8,18 @@
 
 #include <stdio.h>
 
+/** @brief Blur kernel radius (box blur filter size) */
 const int BLUR_SIZE = 1;
 
 /**
- * @brief CUDA kernel for image_blur
+ * @brief CUDA kernel for image blur
  *
- * TODO: Implement image_blur kernel
+ * Applies box blur filter to grayscale image.
  *
- * @param input Input data
- * @param output Output data
- * @param n Size of the data
+ * @param input Grayscale input image
+ * @param output Blurred output image
+ * @param width Image width in pixels
+ * @param height Image height in pixels
  */
 __global__ void image_blur_kernel(unsigned char *input, unsigned char *output,
                                   int width, int height) {
@@ -42,11 +44,12 @@ __global__ void image_blur_kernel(unsigned char *input, unsigned char *output,
 }
 
 /**
- * @brief Host wrapper function for image_blur
+ * @brief Host wrapper for image blur
  *
- * @param h_input Host input data
- * @param h_output Host output data
- * @param n Size of the data
+ * @param h_input Grayscale input image on host
+ * @param h_output Blurred output image on host
+ * @param width Image width in pixels
+ * @param height Image height in pixels
  */
 void image_blur(unsigned char *h_input, unsigned char *h_output, int width,
                 int height) {
@@ -82,7 +85,34 @@ int main() {
   printf("image_blur - CUDA implementation\n");
   printf("Chapter 3: Image Blur kernel implementation\n\n");
 
-  // TODO: Implement test/demo code
+  // Simple 4x4 grayscale image test
+  int width = 4;
+  int height = 4;
+
+  // Grayscale image with a bright center
+  unsigned char h_input[] = {10, 20,  30,  40, 50, 255, 255, 60,
+                             70, 255, 255, 80, 90, 100, 110, 120};
+
+  unsigned char h_output[width * height];
+
+  printf("Input image (4x4):\n");
+  for (int i = 0; i < height; i++) {
+    for (int j = 0; j < width; j++) {
+      printf("%3d ", h_input[i * width + j]);
+    }
+    printf("\n");
+  }
+
+  // Run blur operation
+  image_blur(h_input, h_output, width, height);
+
+  printf("\nBlurred image:\n");
+  for (int i = 0; i < height; i++) {
+    for (int j = 0; j < width; j++) {
+      printf("%3d ", h_output[i * width + j]);
+    }
+    printf("\n");
+  }
 
   return 0;
 }

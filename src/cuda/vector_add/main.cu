@@ -1,16 +1,25 @@
+/**
+ * @file main.cu
+ * @brief Vector addition kernel implementation
+ * @author Param Pal Singh
+ * @chapter 2
+ *
+ */
+
 #include <stdio.h>
 
 __global__ void hello_from_gpu() { printf("Hello from the GPU!\n"); }
 
-/*
+/**
  * @brief CUDA kernel for vector addition
  *
- * This kernel function computes the addition of a vector element
+ * Computes element-wise addition of two vectors in parallel.
  *
- * @param A_d The first vector
- * @param B_d The second vector
- * @param C_d The result vector
- * */
+ * @param d_A First input vector on device
+ * @param d_B Second input vector on device
+ * @param d_C Output vector on device
+ * @param n Length of the vectors
+ */
 __global__ void vec_add_kernel(float *d_A, float *d_B, float *d_C, int n) {
 
   // NOTE: The `__global__` keyword indicates that the function is a kernel and
@@ -40,15 +49,13 @@ __global__ void vec_add_kernel(float *d_A, float *d_B, float *d_C, int n) {
 }
 
 /**
- * @brief Sequential vector addition
+ * @brief Sequential vector addition on host
  *
- * This functions adds two vector in a sequential fashion.
- *
- * @param h_A The first vector
- * @param h_B The second vector
- * @param h_C The result vector
- * @param n The length of the vectors
- * */
+ * @param h_A First input vector on host
+ * @param h_B Second input vector on host
+ * @param h_C Output vector on host
+ * @param n Length of the vectors
+ */
 
 void seq_vec_add(float *h_A, float *h_B, float *h_C, int n) {
   for (int i = 0; i < n; i++) {
@@ -56,16 +63,17 @@ void seq_vec_add(float *h_A, float *h_B, float *h_C, int n) {
   }
 }
 
-/*
- * @brief Parallel vector addition
+/**
+ * @brief Parallel vector addition using CUDA
  *
- * This functions adds two vector in a parallel fashion.
+ * Allocates device memory, copies data to device, launches kernel, and copies
+ * result back.
  *
- * @param h_A The first vector
- * @param h_B The second vector
- * @param h_C The result vector
- * @param n The length of the vectors
- * */
+ * @param h_A First input vector on host
+ * @param h_B Second input vector on host
+ * @param h_C Output vector on host
+ * @param n Length of the vectors
+ */
 void par_vecAdd(float *h_A, float *h_B, float *h_C, int n) {
   int size = n * sizeof(float);
   float *d_A, *d_B, *d_C;
@@ -133,6 +141,29 @@ int main() {
   printf("vector addition - CUDA implementation\n");
   printf("Chapter 2: Vector addition\n\n");
 
-  // TODO: Implement test/demo code
+  // Simple test with small vectors
+  int n = 10;
+  float h_A[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0};
+  float h_B[] = {10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0};
+  float h_C[n];
+
+  printf("Input vectors:\n");
+  printf("A: ");
+  for (int i = 0; i < n; i++)
+    printf("%.1f ", h_A[i]);
+  printf("\nB: ");
+  for (int i = 0; i < n; i++)
+    printf("%.1f ", h_B[i]);
+  printf("\n\n");
+
+  // Run parallel vector addition
+  par_vecAdd(h_A, h_B, h_C, n);
+
+  printf("Result (A + B):\n");
+  printf("C: ");
+  for (int i = 0; i < n; i++)
+    printf("%.1f ", h_C[i]);
+  printf("\n");
+
   return 0;
 }
