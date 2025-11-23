@@ -16,6 +16,7 @@
  * @brief CUDA kernel for tiled_matmul
  *
  * The functions implements tiled_matmul kernel
+ * TODO: Implement general matmul with rectangular matrices
  *
  * @param input Input data
  * @param output Output data
@@ -23,6 +24,9 @@
  */
 __global__ void tiled_matmul_kernel(float *M, float *N, float *P, int width) {
 
+  // NOTE: Recall that the scope of shared memory variables is a block.
+  // Thus one version of the Mds and Nds arrays will be created for each block,
+  // and all threads of a block have access to the same Mds and Nds version.
   __shared__ float Mds[TILE_WIDTH][TILE_WIDTH];
   __shared__ float Nds[TILE_WIDTH][TILE_WIDTH];
 
@@ -43,8 +47,18 @@ __global__ void tiled_matmul_kernel(float *M, float *N, float *P, int width) {
     // The tiles are like temporary variables that are overwritten at each phase
     // For given output block / tile in P we load and use
     // all the corresponding row and column tiles
-    Mds[ty][tx] = M[row * width + (ph * TILE_WIDTH + tx)];
-    Nds[ty][tx] = N[(ph * TILE_WIDTH + ty) * width + col];
+
+    if (row < width && (ph * TILE_WIDTH + tx) < width) {
+      Mds[ty][tx] = M[row * width + (ph * TILE_WIDTH + tx)];
+    } else {
+      Mds[ty][tx] = 0.0f;
+    }
+
+    if ((ph * TILE_WIDTH + ty) < width && col < width) {
+      Nds[ty][tx] = N[(ph * TILE_WIDTH + ty) * width + col];
+    } else {
+      Nds[ty][tx] = 0.0f;
+    }
 
     __syncthreads();
     // NOTE: Since we are syncing threads at each phase after each load,
