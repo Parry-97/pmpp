@@ -16,6 +16,7 @@
  * @brief CUDA kernel for tiled_matmul
  *
  * The functions implements tiled_matmul kernel
+ * TODO: Implement general matmul with rectangular matrices
  *
  * @param input Input data
  * @param output Output data
@@ -23,6 +24,9 @@
  */
 __global__ void tiled_matmul_kernel(float *M, float *N, float *P, int width) {
 
+  // NOTE: Recall that the scope of shared memory variables is a block.
+  // Thus one version of the Mds and Nds arrays will be created for each block,
+  // and all threads of a block have access to the same Mds and Nds version.
   __shared__ float Mds[TILE_WIDTH][TILE_WIDTH];
   __shared__ float Nds[TILE_WIDTH][TILE_WIDTH];
 
@@ -43,8 +47,18 @@ __global__ void tiled_matmul_kernel(float *M, float *N, float *P, int width) {
     // The tiles are like temporary variables that are overwritten at each phase
     // For given output block / tile in P we load and use
     // all the corresponding row and column tiles
-    Mds[ty][tx] = M[row * width + (ph * TILE_WIDTH + tx)];
-    Nds[ty][tx] = N[(ph * TILE_WIDTH + ty) * width + col];
+
+    if (row < width && (ph * TILE_WIDTH + tx) < width) {
+      Mds[ty][tx] = M[row * width + (ph * TILE_WIDTH + tx)];
+    } else {
+      Mds[ty][tx] = 0.0f;
+    }
+
+    if ((ph * TILE_WIDTH + ty) < width && col < width) {
+      Nds[ty][tx] = N[(ph * TILE_WIDTH + ty) * width + col];
+    } else {
+      Nds[ty][tx] = 0.0f;
+    }
 
     __syncthreads();
     // NOTE: Since we are syncing threads at each phase after each load,
@@ -79,6 +93,31 @@ __global__ void tiled_matmul_kernel(float *M, float *N, float *P, int width) {
  * @param h_input Host input data
  * @param h_output Host output data
  * @param n Size of the data
+ */
+/**
+ * @brief CUDA Kernel Launch Configuration Parameters
+ *
+ * When launching a CUDA kernel, there are four main configuration parameters
+ * that can be specified:
+ *
+ * 1.  **Grid Dimension (`gridDim`)**: This defines the dimensions of the grid
+ * of thread blocks. It's typically a `dim3` type, allowing for 1D, 2D, or 3D
+ * grids.
+ * 2.  **Block Dimension (`blockDim`)**: This defines the dimensions of each
+ * thread block within the grid. It's also typically a `dim3` type, allowing for
+ * 1D, 2D, or 3D blocks. The product of its components (`blockDim.x * blockDim.y
+ * * blockDim.z`) determines the number of threads per block.
+ * 3.  **Shared Memory (`sharedMem`)**: An optional parameter that specifies the
+ * amount of dynamically allocated shared memory in bytes for each thread block.
+ * If not explicitly set, it defaults to 0.
+ * 4.  **Stream (`cudaStream_t stream`)**: An optional parameter that assigns
+ * the kernel launch to a specific CUDA stream. If omitted, the kernel defaults
+ * to the null stream (stream 0), which generally implies synchronous execution
+ * with other device operations.
+ *
+ * These parameters are passed in the triple angle brackets (`<<<...>>>`) during
+ * the kernel launch, for example: `kernelName<<<gridDim, blockDim, sharedMem,
+ * stream>>>(args...);`
  */
 void tiled_matmul(float *h_input, float *h_output, int n) {
   int size = n * sizeof(float);
