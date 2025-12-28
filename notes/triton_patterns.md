@@ -5,6 +5,7 @@ This document shows common GPU kernel patterns, comparing your CUDA implementati
 ## Pattern 1: Vector Addition (1D)
 
 ### Your CUDA Version
+
 ```cuda
 __global__ void vec_add_kernel(float *d_A, float *d_B, float *d_C, int n) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -16,6 +17,7 @@ __global__ void vec_add_kernel(float *d_A, float *d_B, float *d_C, int n) {
 ```
 
 ### Triton Equivalent
+
 ```python
 @triton.jit
 def add_kernel(x_ptr, y_ptr, output_ptr, n_elements, BLOCK_SIZE: tl.constexpr):
@@ -38,6 +40,7 @@ def add(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
 ```
 
 ### Key Differences
+
 | CUDA | Triton |
 |------|--------|
 | `int i = ...` (scalar) | `offsets = ...` (vector) |
@@ -49,6 +52,7 @@ def add(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
 ## Pattern 2: Matrix Multiplication (Naive)
 
 ### Your CUDA Version
+
 ```cuda
 __global__ void matmul_kernel(float *M, float *N, float *P, int width) {
     int col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -65,6 +69,7 @@ __global__ void matmul_kernel(float *M, float *N, float *P, int width) {
 ```
 
 ### Triton Equivalent (Naive - for understanding)
+
 ```python
 @triton.jit
 def matmul_naive_kernel(
@@ -106,6 +111,7 @@ def matmul_naive_kernel(
 ## Pattern 3: Tiled Matrix Multiplication (Optimized)
 
 ### Your CUDA Version (Tiled)
+
 ```cuda
 __global__ void tiled_matmul_kernel(float *M, float *N, float *P, int width) {
     __shared__ float Mds[TILE_WIDTH][TILE_WIDTH];
@@ -134,6 +140,7 @@ __global__ void tiled_matmul_kernel(float *M, float *N, float *P, int width) {
 ```
 
 ### Triton Equivalent (The Real Power)
+
 ```python
 @triton.jit
 def matmul_kernel(
@@ -186,6 +193,7 @@ def matmul_kernel(
 ```
 
 ### What Triton Does For You (That You Did Manually in CUDA)
+
 | Your CUDA Work | Triton Compiler Handles |
 |----------------|-------------------------|
 | `__shared__ float Mds[...]` | Automatic shared memory allocation |
@@ -199,6 +207,7 @@ def matmul_kernel(
 ## Pattern 4: Image Processing (2D Grid)
 
 ### Your CUDA Version (Grayscale)
+
 ```cuda
 __global__ void grayscale_kernel(unsigned char *input, unsigned char *output,
                                  int width, int height) {
@@ -219,6 +228,7 @@ __global__ void grayscale_kernel(unsigned char *input, unsigned char *output,
 ```
 
 ### Triton Equivalent
+
 ```python
 @triton.jit
 def grayscale_kernel(
@@ -264,6 +274,7 @@ grayscale_kernel[grid](input_ptr, output_ptr, width, height, BLOCK_X=16, BLOCK_Y
 ## Pattern 5: Reduction (Sum)
 
 ### CUDA Pattern
+
 ```cuda
 __global__ void sum_kernel(float *input, float *output, int n) {
     __shared__ float sdata[BLOCK_SIZE];
@@ -286,6 +297,7 @@ __global__ void sum_kernel(float *input, float *output, int n) {
 ```
 
 ### Triton Equivalent
+
 ```python
 @triton.jit
 def sum_kernel(input_ptr, output_ptr, n_elements, BLOCK_SIZE: tl.constexpr):
@@ -312,6 +324,7 @@ The magic: `tl.sum()` compiles to an efficient parallel reduction - you don't wr
 ### Why Fusion Matters
 
 Without fusion (PyTorch naive):
+
 ```python
 # 3 separate kernel launches, 3 global memory round-trips
 max_val = x.max(dim=-1, keepdim=True)  # Read x, write max
@@ -322,6 +335,7 @@ output = exp_x / sum_exp                 # Read exp, sum; write output
 ```
 
 ### Triton Fused Softmax
+
 ```python
 @triton.jit
 def softmax_kernel(
@@ -358,6 +372,7 @@ def softmax_kernel(
 ## Kernel Launch Patterns
 
 ### Basic Launch
+
 ```python
 # 1D grid
 grid = (triton.cdiv(n, BLOCK_SIZE),)
@@ -369,6 +384,7 @@ kernel[grid](args..., BLOCK_M=64, BLOCK_N=64)
 ```
 
 ### Lambda Grid (Dynamic Configuration)
+
 ```python
 # Grid size depends on constexpr values chosen by autotuner
 grid = lambda META: (
@@ -378,6 +394,7 @@ kernel[grid](args...)
 ```
 
 ### Wrapper Function Pattern
+
 ```python
 def matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     # Validate inputs
