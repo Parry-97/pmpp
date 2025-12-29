@@ -20,11 +20,13 @@ data = tl.load(ptr + offsets, mask=mask, other=0.0)
 ```
 
 **Parameters:**
+
 - `ptr + offsets`: Pointer arithmetic (scalar ptr + vector of offsets = vector of ptrs)
 - `mask`: Boolean tensor - only load where True
 - `other`: Default value where mask is False (prevents undefined behavior)
 
 **CUDA Equivalent:**
+
 ```cuda
 // CUDA - per thread
 if (i < n) {
@@ -46,24 +48,115 @@ tl.store(ptr + offsets, value, mask=mask)
 
 ### 3. Block Pointers (Advanced)
 
-For strided/2D access patterns:
+Block pointers are a higher-level abstraction for managing 2D/3D memory access. They simplify tiled access patterns (like in MatMul or Conv) by handling pointer arithmetic, striding, and boundary conditions automatically.
+
+**Why use them?**
+
+- **Simplicity:** No need to manually calculate `offs_am[:, None] * stride_am + offs_k[None, :]`.
+- **Safety:** Built-in boundary checks (`boundary_check` parameter).
+- **Performance:** Can help the compiler generate more optimal memory access instructions (e.g., `ldmatrix` on NVIDIA GPUs) and reduce register usage.
+
+#### 3.1 Creating a Block Pointer: `tl.make_block_ptr`
 
 ```python
-# Create a block pointer to a tile in a matrix
 block_ptr = tl.make_block_ptr(
-    base=matrix_ptr,
-    shape=(M, N),
-    strides=(stride_m, stride_n),
-    offsets=(row_offset, col_offset),
-    block_shape=(BLOCK_M, BLOCK_N),
-    order=(1, 0)  # Memory layout order
+    base=ptr,              # Base pointer to the tensor
+    shape=(M, N),          # Original shape of the tensor (global dims)
+    strides=(stride_m, stride_n), # Strides of the tensor
+    offsets=(start_m, start_n),   # Starting offset of the block
+    block_shape=(BLOCK_M, BLOCK_N), # Shape of the block to load
+    order=(1, 0)           # Order of dimensions in memory (1,0 for row-major/C-contiguous)
+)
+```
+
+- **`order` parameter**: Specifies which dimension moves fastest in memory.
+  - For row-major (C-style) `(M, N)` array, the stride is `(N, 1)`. The columns (dim 1) are contiguous, so `order=(1, 0)`.
+  - For column-major (F-style) `(M, N)` array, the stride is `(1, M)`. The rows (dim 0) are contiguous, so `order=(0, 1)`.
+
+#### 3.2 Loading and Storing
+
+**Loading:**
+
+```python
+
+# Load a block. 
+
+# boundary_check=(0, 1) handles masking if the block exceeds (M, N).
+
+# padding_option="zero" (default) fills out-of-bounds with 0.
+
+tile = tl.load(block_ptr, boundary_check=(0, 1), padding_option="zero")
+
+```
+
+**Storing:**
+
+```python
+
+# Store a block.
+
+tl.store(block_ptr, tile, boundary_check=(0, 1))
+
+```
+
+**Understanding `boundary_check`**:
+
+The `boundary_check` argument is a tuple of integers indicating which dimensions require bounds protection.
+
+- **How it works**: It compares the block's current range against the `shape` provided in `make_block_ptr`.
+
+- **Behavior**:
+
+  - **On Load**: If indices exceed the shape, values are replaced with `padding_option` (default 0).
+  - **On Store**: If indices exceed the shape, the write is discarded (masked out).
+
+- **Comparison**:
+
+  - *Manual*: `mask = (rows[:, None] < M) & (cols[None, :] < N)` -> `tl.load(..., mask=mask)`
+  - *Block Ptr*: `boundary_check=(0, 1)` (Handling is automatic).
+
+#### 3.3 Advancing the Pointer: `tl.advance`
+
+Instead of creating a new pointer for the next tile, you update the existing one. This is efficient and keeps the code clean.
+
+```python
+# Move the block by [BLOCK_M, 0] (e.g., down one block-row)
+block_ptr = tl.advance(block_ptr, (BLOCK_M, 0))
+```
+
+#### 3.4 Example: Tiled Matrix Multiplication Loop
+
+```python
+# Initialize block pointer for A (M x K)
+a_ptr = tl.make_block_ptr(
+    base=A, shape=(M, K), strides=(stride_am, stride_ak),
+    offsets=(pid_m * BLOCK_M, 0), block_shape=(BLOCK_M, BLOCK_K),
+    order=(1, 0)
 )
 
-# Load the entire block
-tile = tl.load(block_ptr, boundary_check=(0, 1))
+# Initialize block pointer for B (K x N)
+b_ptr = tl.make_block_ptr(
+    base=B, shape=(K, N), strides=(stride_bk, stride_bn),
+    offsets=(0, pid_n * BLOCK_N), block_shape=(BLOCK_K, BLOCK_N),
+    order=(1, 0)
+)
 
-# Advance the pointer
-block_ptr = tl.advance(block_ptr, (BLOCK_M, 0))
+accumulator = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
+
+for k in range(0, K, BLOCK_K):
+    # Load tiles with automatic boundary handling
+    # If the matrix dimension isn't a multiple of BLOCK_SIZE, this handles it safely.
+    a = tl.load(a_ptr, boundary_check=(0, 1))
+    b = tl.load(b_ptr, boundary_check=(0, 1))
+    
+    # Compute
+    accumulator = tl.dot(a, b, accumulator)
+    
+    # Advance pointers to next K-block
+    # A moves horizontally (K dim is dim 1): (0, BLOCK_K)
+    # B moves vertically (K dim is dim 0): (BLOCK_K, 0)
+    a_ptr = tl.advance(a_ptr, (0, BLOCK_K))
+    b_ptr = tl.advance(b_ptr, (BLOCK_K, 0))
 ```
 
 ## Index Generation

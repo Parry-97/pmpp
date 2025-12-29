@@ -67,6 +67,63 @@ def naive_matmul_kernel(
     tl.store(output_ptr + out_offsets, output, mask=out_mask)
 
 
+@triton.jit
+def block_matmul_kernel(
+    x_ptr,
+    y_ptr,
+    out_ptr,
+    M,
+    N,
+    K,
+    BLOCK_SIZE_M: tl.constexpr,
+    BLOCK_SIZE_N: tl.constexpr,
+    BLOCK_SIZE_K: tl.constexpr,
+):
+    pid_row = tl.program_id(axis=0)
+    pid_col = tl.program_id(axis=1)
+
+    x_block = tl.make_block_ptr(
+        base=x_ptr,
+        shape=(M, K),
+        strides=(M, 1),
+        offsets=(pid_row * BLOCK_SIZE_M, 0),
+        block_shape=(BLOCK_SIZE_M, BLOCK_SIZE_K),
+        order=(1, 0),
+    )
+
+    y_block = tl.make_block_ptr(
+        base=y_ptr,
+        shape=(K, N),
+        strides=(K, 1),
+        offsets=(0, pid_col * BLOCK_SIZE_N),
+        block_shape=(BLOCK_SIZE_M, BLOCK_SIZE_K),
+        order=(1, 0),
+    )
+
+    out_block = tl.make_block_ptr(
+        base=out_ptr,
+        shape=(M, N),
+        strides=(M, 1),
+        offsets=(pid_row * M, pid_col * N),
+        block_shape=(BLOCK_SIZE_M, BLOCK_SIZE_N),
+        order=(1, 0),
+    )
+
+    output = tl.zeros(shape=(BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=tl.float32)
+
+    k = 0
+    while k < K:
+        x = tl.load(x_block, boundary_check=(0, 1))
+        y = tl.load(y_block, boundary_check=(0, 1))
+
+        output += tl.dot(x, y)
+        tl.advance(x_block, (0, BLOCK_SIZE_K))
+        tl.advance(y_block, (BLOCK_SIZE_K, 0))
+        k += BLOCK_SIZE_K
+
+    tl.store(out_block, output, boundary_check=(0, 1))
+
+
 def matmul_kernel(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     """
     Wrapper function to launch the Triton kernel.
@@ -98,6 +155,48 @@ def matmul_kernel(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     return output
 
 
+def block_matmul(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    """
+    Wrapper function to launch the Triton kernel.
+
+    Args:
+        x: Input tensor
+        y: Input tensor
+
+    Returns:
+        Output tensor after kernel computation
+    """
+    # Ensure input is contiguous
+    x = x.contiguous()
+    y = y.contiguous()
+
+    # Allocate output tensor
+    output = torch.zeros(x.size())
+    output = output.contiguous()
+
+    # Define block size
+    BLOCK_SIZE = tl.constexpr(32)
+
+    # Calculate grid size (number of programs to launch)
+    grid = (triton.cdiv(x.size(0), BLOCK_SIZE), triton.cdiv(x.size(1), BLOCK_SIZE))
+
+    # Launch the kernel
+    # NOTE: We assume the block size to be the same
+    block_matmul_kernel[grid](
+        x,
+        y,
+        output,
+        x.size(0),
+        y.size(1),
+        x.size(1),
+        BLOCK_SIZE,
+        BLOCK_SIZE,
+        BLOCK_SIZE,
+    )
+
+    return output
+
+
 if __name__ == "__main__":
     # Test the kernel
     torch.manual_seed(0)
@@ -111,7 +210,15 @@ if __name__ == "__main__":
 
     # Verify correctness (replace with actual expected computation)
     expected = x @ y
-    print("Expected Output:")
+    print("Naive matmul expected Output:")
+    pprint(expected)
+    print("Actual Output:")
+    pprint(output)
+    assert torch.allclose(output, expected), "Kernel output does not match expected!"
+    print("✓ Kernel test passed!")
+
+    output = block_matmul(x, y)
+    print("Block matmul expected Output:")
     pprint(expected)
     print("Actual Output:")
     pprint(output)

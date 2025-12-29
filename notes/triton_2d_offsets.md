@@ -72,4 +72,3 @@ The magic happens at step 4. You are essentially doing this addition:
 │    ...     │    │ col_N * S  │      │ rM*S+c0*S  ...    │
 └            ┘    └            ┘      └                   ┘
 ```
-
