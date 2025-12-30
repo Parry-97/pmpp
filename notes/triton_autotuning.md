@@ -53,12 +53,14 @@ triton.Config(
 ```
 
 ### num_warps
+
 - Controls how many warps (groups of 32 threads) execute the kernel
 - More warps = more parallelism but more register pressure
 - Typical values: 2, 4, 8, 16
 - Rule of thumb: Larger block sizes → more warps
 
 ### num_stages
+
 - Controls software pipelining depth for memory operations
 - More stages = better latency hiding but more register/shared memory usage
 - Typical values: 2, 3, 4, 5
@@ -74,6 +76,7 @@ triton.Config(
 ```
 
 The autotuner caches the best configuration for each unique combination of key values:
+
 - First call with M=1024, N=1024, K=512 → runs all configs, caches best
 - Second call with same values → uses cached config
 - Call with M=2048, N=1024, K=512 → runs all configs again (different M)
@@ -81,6 +84,7 @@ The autotuner caches the best configuration for each unique combination of key v
 ## Configuration Strategies
 
 ### For Matrix Multiplication (Compute-Bound)
+
 ```python
 def get_cuda_autotune_config():
     return [
@@ -103,6 +107,7 @@ def get_cuda_autotune_config():
 ```
 
 ### For Memory-Bound Kernels (Element-wise, Reductions)
+
 ```python
 def get_elementwise_config():
     return [
@@ -136,12 +141,13 @@ def matmul_kernel(..., GROUP_SIZE_M: tl.constexpr):
 ```
 
 **Visual: Without vs With Grouping**
+
 ```
 Without GROUP_SIZE_M (row-major):     With GROUP_SIZE_M=4:
 Program order visits output tiles:    Programs visit tiles in groups:
 ┌───┬───┬───┬───┐                     ┌───┬───┬───┬───┐
-│ 0 │ 1 │ 2 │ 3 │ → far apart        │ 0 │ 4 │ 8 │12 │
-├───┼───┼───┼───┤   in B matrix      ├───┼───┼───┼───┤  
+│ 0 │ 1 │ 2 │ 3 │ → far apart         │ 0 │ 4 │ 8 │12 │
+├───┼───┼───┼───┤   in B matrix       ├───┼───┼───┼───┤  
 │ 4 │ 5 │ 6 │ 7 │                     │ 1 │ 5 │ 9 │13 │ → nearby tiles
 ├───┼───┼───┼───┤                     ├───┼───┼───┼───┤   share B data
 │ 8 │ 9 │10 │11 │                     │ 2 │ 6 │10 │14 │   in L2 cache
@@ -212,18 +218,22 @@ ms, min_ms, max_ms = triton.testing.do_bench(
 ## Common Performance Issues
 
 ### 1. Block Size Too Large
+
 **Symptom:** Low occupancy, register spilling
 **Solution:** Reduce BLOCK_SIZE, reduce num_warps
 
 ### 2. Block Size Too Small
+
 **Symptom:** Not enough work per program, poor arithmetic intensity
 **Solution:** Increase BLOCK_SIZE
 
 ### 3. Non-Power-of-2 Block Sizes
+
 **Symptom:** Suboptimal vectorization
 **Solution:** Use powers of 2 (32, 64, 128, 256)
 
 ### 4. Memory Access Not Coalesced
+
 **Symptom:** Low memory throughput
 **Solution:** Ensure consecutive threads access consecutive memory
 
