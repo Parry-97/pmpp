@@ -18,3 +18,10 @@ torch = { index = "pytorch" }
 name = "pytorch"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
+
+[dependency-groups]
+dev = [
+    "ipython>=9.8.0",
+    "matplotlib>=3.10.8",
+    "pandas>=2.3.3",
+]
